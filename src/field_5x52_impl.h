@@ -13,7 +13,7 @@
 #include "modinv64_impl.h"
 
 #if defined(USE_ASM_X86_64)
-#include "field_5x52_asm_impl.h"
+#include "third_party/field_5x52_asm_impl_cryptopt.h"
 #else
 #include "field_5x52_int128_impl.h"
 #endif

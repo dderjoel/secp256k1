@@ -93,7 +93,7 @@ libsecp256k1_common_la_SOURCES = src/asm/field_10x26_arm.s
 endif
 endif
 
-libsecp256k1_la_SOURCES = src/secp256k1.c
+libsecp256k1_la_SOURCES = src/secp256k1.c src/third_party/field_5x52_asm_impl_cryptopt.c
 libsecp256k1_la_CPPFLAGS = $(SECP_CONFIG_DEFINES)
 libsecp256k1_la_LIBADD = $(COMMON_LIB) $(PRECOMPUTED_LIB)
 libsecp256k1_la_LDFLAGS = -no-undefined -version-info $(LIB_VERSION_CURRENT):$(LIB_VERSION_REVISION):$(LIB_VERSION_AGE)
@@ -101,13 +101,13 @@ libsecp256k1_la_LDFLAGS = -no-undefined -version-info $(LIB_VERSION_CURRENT):$(L
 noinst_PROGRAMS =
 if USE_BENCHMARK
 noinst_PROGRAMS += bench bench_internal bench_ecmult
-bench_SOURCES = src/bench.c
+bench_SOURCES = src/bench.c src/third_party/field_5x52_asm_impl_cryptopt.c
 bench_LDADD = libsecp256k1.la
 bench_CPPFLAGS = $(SECP_CONFIG_DEFINES)
-bench_internal_SOURCES = src/bench_internal.c
+bench_internal_SOURCES = src/bench_internal.c src/third_party/field_5x52_asm_impl_cryptopt.c
 bench_internal_LDADD = $(COMMON_LIB) $(PRECOMPUTED_LIB)
 bench_internal_CPPFLAGS = $(SECP_CONFIG_DEFINES)
-bench_ecmult_SOURCES = src/bench_ecmult.c
+bench_ecmult_SOURCES = src/bench_ecmult.c src/third_party/field_5x52_asm_impl_cryptopt.c
 bench_ecmult_LDADD = $(COMMON_LIB) $(PRECOMPUTED_LIB)
 bench_ecmult_CPPFLAGS = $(SECP_CONFIG_DEFINES)
 endif
@@ -116,7 +116,7 @@ TESTS =
 if USE_TESTS
 TESTS += noverify_tests
 noinst_PROGRAMS += noverify_tests
-noverify_tests_SOURCES = src/tests.c
+noverify_tests_SOURCES = src/tests.c src/third_party/field_5x52_asm_impl_cryptopt.c
 noverify_tests_CPPFLAGS = $(SECP_CONFIG_DEFINES)
 noverify_tests_LDADD = $(COMMON_LIB) $(PRECOMPUTED_LIB)
 noverify_tests_LDFLAGS = -static
@@ -132,14 +132,14 @@ endif
 
 if USE_CTIME_TESTS
 noinst_PROGRAMS += ctime_tests
-ctime_tests_SOURCES = src/ctime_tests.c
+ctime_tests_SOURCES = src/ctime_tests.c src/third_party/field_5x52_asm_impl_cryptopt.c
 ctime_tests_LDADD = libsecp256k1.la
 ctime_tests_CPPFLAGS = $(SECP_CONFIG_DEFINES)
 endif
 
 if USE_EXHAUSTIVE_TESTS
 noinst_PROGRAMS += exhaustive_tests
-exhaustive_tests_SOURCES = src/tests_exhaustive.c
+exhaustive_tests_SOURCES = src/tests_exhaustive.c src/third_party/field_5x52_asm_impl_cryptopt.c
 exhaustive_tests_CPPFLAGS = $(SECP_CONFIG_DEFINES)
 if !ENABLE_COVERAGE
 exhaustive_tests_CPPFLAGS += -DVERIFY
@@ -152,7 +152,7 @@ endif
 
 if USE_EXAMPLES
 noinst_PROGRAMS += ecdsa_example
-ecdsa_example_SOURCES = examples/ecdsa.c
+ecdsa_example_SOURCES = examples/ecdsa.c src/third_party/field_5x52_asm_impl_cryptopt.c
 ecdsa_example_CPPFLAGS = -I$(top_srcdir)/include
 ecdsa_example_LDADD = libsecp256k1.la
 ecdsa_example_LDFLAGS = -static
@@ -162,7 +162,7 @@ endif
 TESTS += ecdsa_example
 if ENABLE_MODULE_ECDH
 noinst_PROGRAMS += ecdh_example
-ecdh_example_SOURCES = examples/ecdh.c
+ecdh_example_SOURCES = examples/ecdh.c src/third_party/field_5x52_asm_impl_cryptopt.c
 ecdh_example_CPPFLAGS = -I$(top_srcdir)/include
 ecdh_example_LDADD = libsecp256k1.la
 ecdh_example_LDFLAGS = -static
@@ -173,7 +173,7 @@ TESTS += ecdh_example
 endif
 if ENABLE_MODULE_SCHNORRSIG
 noinst_PROGRAMS += schnorr_example
-schnorr_example_SOURCES = examples/schnorr.c
+schnorr_example_SOURCES = examples/schnorr.c src/third_party/field_5x52_asm_impl_cryptopt.c
 schnorr_example_CPPFLAGS = -I$(top_srcdir)/include
 schnorr_example_LDADD = libsecp256k1.la
 schnorr_example_LDFLAGS = -static
@@ -188,11 +188,11 @@ endif
 EXTRA_PROGRAMS = precompute_ecmult precompute_ecmult_gen
 CLEANFILES = $(EXTRA_PROGRAMS)
 
-precompute_ecmult_SOURCES = src/precompute_ecmult.c
+precompute_ecmult_SOURCES = src/precompute_ecmult.c src/third_party/field_5x52_asm_impl_cryptopt.c
 precompute_ecmult_CPPFLAGS = $(SECP_CONFIG_DEFINES)
 precompute_ecmult_LDADD = $(COMMON_LIB)
 
-precompute_ecmult_gen_SOURCES = src/precompute_ecmult_gen.c
+precompute_ecmult_gen_SOURCES = src/precompute_ecmult_gen.c src/third_party/field_5x52_asm_impl_cryptopt.c
 precompute_ecmult_gen_CPPFLAGS = $(SECP_CONFIG_DEFINES)
 precompute_ecmult_gen_LDADD = $(COMMON_LIB)
 
@@ -209,7 +209,7 @@ src/precomputed_ecmult_gen.c:
 	$(MAKE) $(AM_MAKEFLAGS) precompute_ecmult_gen$(EXEEXT)
 	./precompute_ecmult_gen$(EXEEXT)
 
-PRECOMP = src/precomputed_ecmult_gen.c src/precomputed_ecmult.c
+PRECOMP = src/precomputed_ecmult_gen.c src/precomputed_ecmult.c src/third_party/field_5x52_asm_impl_cryptopt.c
 precomp: $(PRECOMP)
 
 # Ensure the prebuilt files will be build first (only if they don't exist,
