@@ -29,7 +29,7 @@ static void secp256k1_ecmult_odd_multiples_table_globalz_windowa(secp256k1_ge *p
 #define ECMULT_CONST_TABLE_GET_GE(r,pre,n,w) do { \
     int m = 0; \
     /* Extract the sign-bit for a constant time absolute-value. */ \
-    int mask = (n) >> (sizeof(n) * CHAR_BIT - 1); \
+    int volatile mask = (n) >> (sizeof(n) * CHAR_BIT - 1); \
     int abs_n = ((n) + mask) ^ mask; \
     int idx_n = abs_n >> 1; \
     secp256k1_fe neg_y; \
@@ -143,6 +143,11 @@ static void secp256k1_ecmult_const(secp256k1_gej *r, const secp256k1_ge *a, cons
     int wnaf_1[1 + WNAF_SIZE(WINDOW_A - 1)];
 
     int i;
+
+    if (secp256k1_ge_is_infinity(a)) {
+        secp256k1_gej_set_infinity(r);
+        return;
+    }
 
     /* build wnaf representation for q. */
     /* split q into q_1 and q_lam (where q = q_1 + q_lam*lambda, and q_1 and q_lam are ~128 bit) */
