@@ -73,3 +73,54 @@ AC_DEFUN([SECP_SET_DEFAULT], [
     $1="$2"
   fi
 ])
+
+dnl  based on
+dnl  http://git.savannah.gnu.org/gitweb/?p=autoconf-archive.git;a=blob_plain;f=m4/ax_gcc_x86_cpuid.m4
+
+AC_DEFUN([SECP_CHECK_BMI2],
+[SECP_X86_CPUID_CHECK(7, 0, ebx, 8)
+    if test x"$secp_x86_cpuid_7_0_ebx_8" == x"1"; then 
+        HAVE_CPU_FEATURE_BMI2=yes
+    else
+        HAVE_CPU_FEATURE_BMI2=no
+    fi
+])
+
+AC_DEFUN([SECP_CHECK_ADX],
+[SECP_X86_CPUID_CHECK(7, 0, ebx, 19)
+    if test x"$secp_x86_cpuid_7_0_ebx_19" == x"1"; then 
+        HAVE_CPU_FEATURE_ADX=yes
+    else
+        HAVE_CPU_FEATURE_ADX=no
+    fi
+])
+
+dnl  $1 EAX value
+dnl  $2 ECX value
+dnl  $3 (eax,ebx,ecx,edx) register to check
+dnl  $4 (integer 0..63) Bit to check reg ($3)
+dnl
+dnl  then sets variable secp_x86_cpuid_$1_$2_$3_$4 to '1' or '0'
+AC_DEFUN([SECP_X86_CPUID_CHECK],
+[AC_REQUIRE([AC_PROG_CC])
+AC_LANG_PUSH([C])
+AC_CACHE_CHECK(for x86 cpuid $1_$2_$3_$4 output, secp_x86_cpuid_$1_$2_$3_$4,
+ [AC_RUN_IFELSE([AC_LANG_PROGRAM([#include <stdio.h>], [
+     int op = $1, level = $2, eax, ebx, ecx, edx;
+     FILE *f;
+      __asm__ __volatile__ ("xchg %%ebx, %1\n"
+        "cpuid\n"
+        "xchg %%ebx, %1\n"
+        : "=a" (eax), "=r" (ebx), "=c" (ecx), "=d" (edx)
+        : "a" (op), "2" (level));
+
+     f = fopen("secp_conftest_cpuid", "w"); if (!f) return 1;
+     fprintf(f, "%d\n", ($3 >> $4) & 0x1 );
+     fclose(f);
+     return 0;
+])],
+     [secp_x86_cpuid_$1_$2_$3_$4=`cat secp_conftest_cpuid`; rm -f secp_conftest_cpuid],
+     [secp_x86_cpuid_$1_$2_$3_$4=unknown; rm -f secp_conftest_cpuid],
+     [secp_x86_cpuid_$1_$2_$3_$4=unknown])])
+AC_LANG_POP([C])
+])
