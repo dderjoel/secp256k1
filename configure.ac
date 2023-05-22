@@ -265,7 +265,12 @@ fi
 if test x"$req_asm" = x"auto"; then
   SECP_X86_64_ASM_CHECK
   if test x"$has_x86_64_asm" = x"yes"; then
-    set_asm=x86_64
+    AX_GCC_X86_CPU_SUPPORTS(bmi2, HAS_BMI2=yes)
+    AX_GCC_X86_CPU_SUPPORTS(adx,  HAS_ADX=yes)
+    if test x"$HAS_ADX"  == x"yes" &&
+        test x"$HAS_BMI2" == x"yes"; then
+      set_asm=x86_64
+    fi
   fi
   if test x"$set_asm" = x; then
     set_asm=no
