@@ -10,7 +10,12 @@
 
 #include <time.h>
 
+#ifdef USE_EXTERNAL_DEFAULT_CALLBACKS
+    #pragma message("Ignoring USE_EXTERNAL_CALLBACKS in tests.")
+    #undef USE_EXTERNAL_DEFAULT_CALLBACKS
+#endif
 #include "secp256k1.c"
+
 #include "../include/secp256k1.h"
 #include "../include/secp256k1_preallocated.h"
 #include "testrand_impl.h"
@@ -85,7 +90,7 @@ static void random_field_element_test(secp256k1_fe *fe) {
     do {
         unsigned char b32[32];
         secp256k1_testrand256_test(b32);
-        if (secp256k1_fe_set_b32(fe, b32)) {
+        if (secp256k1_fe_set_b32_limit(fe, b32)) {
             break;
         }
     } while(1);
@@ -2221,7 +2226,7 @@ static void scalar_test(void) {
         for (i = 0; i < 100; ++i) {
             int low;
             int shift = 1 + secp256k1_testrand_int(15);
-            int expected = r.d[0] % (1 << shift);
+            int expected = r.d[0] % (1ULL << shift);
             low = secp256k1_scalar_shr_int(&r, shift);
             CHECK(expected == low);
         }
@@ -2952,7 +2957,7 @@ static void random_fe(secp256k1_fe *x) {
     unsigned char bin[32];
     do {
         secp256k1_testrand256(bin);
-        if (secp256k1_fe_set_b32(x, bin)) {
+        if (secp256k1_fe_set_b32_limit(x, bin)) {
             return;
         }
     } while(1);
@@ -2962,7 +2967,7 @@ static void random_fe_test(secp256k1_fe *x) {
     unsigned char bin[32];
     do {
         secp256k1_testrand256_test(bin);
-        if (secp256k1_fe_set_b32(x, bin)) {
+        if (secp256k1_fe_set_b32_limit(x, bin)) {
             return;
         }
     } while(1);
@@ -3016,7 +3021,7 @@ static void run_field_convert(void) {
     unsigned char b322[32];
     secp256k1_fe_storage fes2;
     /* Check conversions to fe. */
-    CHECK(secp256k1_fe_set_b32(&fe2, b32));
+    CHECK(secp256k1_fe_set_b32_limit(&fe2, b32));
     CHECK(secp256k1_fe_equal_var(&fe, &fe2));
     secp256k1_fe_from_storage(&fe2, &fes);
     CHECK(secp256k1_fe_equal_var(&fe, &fe2));
@@ -3038,7 +3043,8 @@ static void run_field_be32_overflow(void) {
         static const unsigned char zero[32] = { 0x00 };
         unsigned char out[32];
         secp256k1_fe fe;
-        CHECK(secp256k1_fe_set_b32(&fe, zero_overflow) == 0);
+        CHECK(secp256k1_fe_set_b32_limit(&fe, zero_overflow) == 0);
+        secp256k1_fe_set_b32_mod(&fe, zero_overflow);
         CHECK(secp256k1_fe_normalizes_to_zero(&fe) == 1);
         secp256k1_fe_normalize(&fe);
         CHECK(secp256k1_fe_is_zero(&fe) == 1);
@@ -3060,7 +3066,8 @@ static void run_field_be32_overflow(void) {
         };
         unsigned char out[32];
         secp256k1_fe fe;
-        CHECK(secp256k1_fe_set_b32(&fe, one_overflow) == 0);
+        CHECK(secp256k1_fe_set_b32_limit(&fe, one_overflow) == 0);
+        secp256k1_fe_set_b32_mod(&fe, one_overflow);
         secp256k1_fe_normalize(&fe);
         CHECK(secp256k1_fe_cmp_var(&fe, &secp256k1_fe_one) == 0);
         secp256k1_fe_get_b32(out, &fe);
@@ -3082,7 +3089,8 @@ static void run_field_be32_overflow(void) {
         unsigned char out[32];
         secp256k1_fe fe;
         const secp256k1_fe fe_ff = SECP256K1_FE_CONST(0, 0, 0, 0, 0, 0, 0x01, 0x000003d0);
-        CHECK(secp256k1_fe_set_b32(&fe, ff_overflow) == 0);
+        CHECK(secp256k1_fe_set_b32_limit(&fe, ff_overflow) == 0);
+        secp256k1_fe_set_b32_mod(&fe, ff_overflow);
         secp256k1_fe_normalize(&fe);
         CHECK(secp256k1_fe_cmp_var(&fe, &fe_ff) == 0);
         secp256k1_fe_get_b32(out, &fe);
@@ -3093,10 +3101,6 @@ static void run_field_be32_overflow(void) {
 /* Returns true if two field elements have the same representation. */
 static int fe_identical(const secp256k1_fe *a, const secp256k1_fe *b) {
     int ret = 1;
-#ifdef VERIFY
-    ret &= (a->magnitude == b->magnitude);
-    ret &= (a->normalized == b->normalized);
-#endif
     /* Compare the struct member that holds the limbs. */
     ret &= (secp256k1_memcmp_var(a->n, b->n, sizeof(a->n)) == 0);
     return ret;
@@ -3184,16 +3188,22 @@ static void run_field_misc(void) {
         q = x;
         secp256k1_fe_cmov(&x, &z, 0);
 #ifdef VERIFY
-        CHECK(x.normalized && x.magnitude == 1);
+        CHECK(!x.normalized);
+        CHECK((x.magnitude == q.magnitude) || (x.magnitude == z.magnitude));
+        CHECK((x.magnitude >= q.magnitude) && (x.magnitude >= z.magnitude));
 #endif
+        x = q;
         secp256k1_fe_cmov(&x, &x, 1);
         CHECK(!fe_identical(&x, &z));
         CHECK(fe_identical(&x, &q));
         secp256k1_fe_cmov(&q, &z, 1);
 #ifdef VERIFY
-        CHECK(!q.normalized && q.magnitude == z.magnitude);
+        CHECK(!q.normalized);
+        CHECK((q.magnitude == x.magnitude) || (q.magnitude == z.magnitude));
+        CHECK((q.magnitude >= x.magnitude) && (q.magnitude >= z.magnitude));
 #endif
         CHECK(fe_identical(&q, &z));
+        q = z;
         secp256k1_fe_normalize_var(&x);
         secp256k1_fe_normalize_var(&z);
         CHECK(!secp256k1_fe_equal_var(&x, &z));
@@ -3207,7 +3217,7 @@ static void run_field_misc(void) {
             secp256k1_fe_normalize_var(&q);
             secp256k1_fe_cmov(&q, &z, (j&1));
 #ifdef VERIFY
-            CHECK((q.normalized != (j&1)) && q.magnitude == ((j&1) ? z.magnitude : 1));
+            CHECK(!q.normalized && q.magnitude == z.magnitude);
 #endif
         }
         secp256k1_fe_normalize_var(&z);
@@ -3668,7 +3678,7 @@ static void run_inverse_tests(void)
         b32[31] = i & 0xff;
         b32[30] = (i >> 8) & 0xff;
         secp256k1_scalar_set_b32(&x_scalar, b32, NULL);
-        secp256k1_fe_set_b32(&x_fe, b32);
+        secp256k1_fe_set_b32_mod(&x_fe, b32);
         for (var = 0; var <= 1; ++var) {
             test_inverse_scalar(NULL, &x_scalar, var);
             test_inverse_field(NULL, &x_fe, var);
@@ -3685,7 +3695,7 @@ static void run_inverse_tests(void)
         for (i = 0; i < 64 * COUNT; ++i) {
             (testrand ? secp256k1_testrand256_test : secp256k1_testrand256)(b32);
             secp256k1_scalar_set_b32(&x_scalar, b32, NULL);
-            secp256k1_fe_set_b32(&x_fe, b32);
+            secp256k1_fe_set_b32_mod(&x_fe, b32);
             for (var = 0; var <= 1; ++var) {
                 test_inverse_scalar(NULL, &x_scalar, var);
                 test_inverse_field(NULL, &x_fe, var);
@@ -7550,23 +7560,23 @@ static void fe_cmov_test(void) {
     secp256k1_fe a = zero;
 
     secp256k1_fe_cmov(&r, &a, 0);
-    CHECK(secp256k1_memcmp_var(&r, &max, sizeof(r)) == 0);
+    CHECK(fe_identical(&r, &max));
 
     r = zero; a = max;
     secp256k1_fe_cmov(&r, &a, 1);
-    CHECK(secp256k1_memcmp_var(&r, &max, sizeof(r)) == 0);
+    CHECK(fe_identical(&r, &max));
 
     a = zero;
     secp256k1_fe_cmov(&r, &a, 1);
-    CHECK(secp256k1_memcmp_var(&r, &zero, sizeof(r)) == 0);
+    CHECK(fe_identical(&r, &zero));
 
     a = one;
     secp256k1_fe_cmov(&r, &a, 1);
-    CHECK(secp256k1_memcmp_var(&r, &one, sizeof(r)) == 0);
+    CHECK(fe_identical(&r, &one));
 
     r = one; a = zero;
     secp256k1_fe_cmov(&r, &a, 0);
-    CHECK(secp256k1_memcmp_var(&r, &one, sizeof(r)) == 0);
+    CHECK(fe_identical(&r, &one));
 }
 
 static void fe_storage_cmov_test(void) {
