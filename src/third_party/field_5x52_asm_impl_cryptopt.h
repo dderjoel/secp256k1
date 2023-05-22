@@ -204,9 +204,8 @@ secp256k1_fe_mul_inner(uint64_t *r, const uint64_t *a,
 
       : "=m"(r[0]), "=m"(r[1]), "=m"(r[2]), "=m"(r[3]), "=m"(r[4])
 
-      : "rdx"(r), "rsi"(a), "rdx"(b), "m"(a[0]), "m"(b[0]), "m"(a[1]),
-        "m"(b[1]), "m"(a[2]), "m"(b[2]), "m"(a[3]), "m"(b[3]), "m"(a[4]),
-        "m"(b[4])
+      : "D"(r), "S"(a), "d"(b), "m"(a[0]), "m"(b[0]), "m"(a[1]), "m"(b[1]),
+        "m"(a[2]), "m"(b[2]), "m"(a[3]), "m"(b[3]), "m"(a[4]), "m"(b[4])
       : "rax", "rcx", "r8", "r9", "r10", "r11", "cc", "memory");
 }
 
@@ -362,8 +361,7 @@ SECP256K1_INLINE static void secp256k1_fe_sqr_inner(uint64_t *r,
       "mov    -0x58(%%rsp),%%r15\n"
 
       : "=m"(r[0]), "=m"(r[1]), "=m"(r[2]), "=m"(r[3]), "=m"(r[4])
-      : "rdx"(r), "rsi"(a), "m"(a[0]), "m"(a[1]), "m"(a[2]), "m"(a[3]),
-        "m"(a[4])
+      : "D"(r), "S"(a), "m"(a[0]), "m"(a[1]), "m"(a[2]), "m"(a[3]), "m"(a[4])
       : "rax", "rcx", "rdx", "r8", "r9", "r10", "r11", "cc", "memory");
 }
 #endif
